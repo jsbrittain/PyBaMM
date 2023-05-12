@@ -12,6 +12,7 @@
 #    * sundials_sunlinsollapackdense
 #    * sundials_sunmatrix_sparse
 #    * sundials_nvecserial
+#    * sundials_nvecparallel
 #
 #    To provide the module with a hint about where to find your SUNDIALS installation,
 #    you can set the environment variable :code:`SUNDIALS_ROOT`. The FindSUNDIALS module will
@@ -51,6 +52,7 @@ set(SUNDIALS_WANT_COMPONENTS
   sundials_sunlinsollapackdense
   sundials_sunmatrixsparse
   sundials_nvecserial
+  sundials_nvecparallel
   )
 
 # find the SUNDIALS libraries

@@ -3,6 +3,8 @@
 #include "common.hpp"
 #include <memory>
 
+#define ENABLE_MPI
+
 CasadiSolver *
 create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &rhs_alg, const Function &jac_times_cjmass,
@@ -44,6 +46,11 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   DEBUG("CasadiSolver::CasadiSolver");
   auto atol = atol_np.unchecked<1>();
 
+  // setup MPI environment
+#ifdef ENABLE_MPI
+  MPI_Init(NULL, NULL);
+#endif
+
   // allocate memory for solver
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Create(NULL, &sunctx);
@@ -54,10 +61,21 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 
   // allocate vectors
 #if SUNDIALS_VERSION_MAJOR >= 6
+# ifdef ENABLE_MPI
+  DEBUG("CasadiSolver::CasadiSolver MPI Enabled");
+  MPI_Comm comm = MPI_COMM_WORLD;
+  sunindextype local_length=number_of_states, global_length=number_of_states;
+  yy = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+  yp = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+  avtol = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+  id = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+# else
+  DEBUG("CasadiSolver::CasadiSolver MPI NOT Enabled");
   yy = N_VNew_Serial(number_of_states, sunctx);
   yp = N_VNew_Serial(number_of_states, sunctx);
   avtol = N_VNew_Serial(number_of_states, sunctx);
   id = N_VNew_Serial(number_of_states, sunctx);
+# endif
 #else
   yy = N_VNew_Serial(number_of_states);
   yp = N_VNew_Serial(number_of_states);
@@ -282,6 +300,10 @@ CasadiSolver::~CasadiSolver()
   IDAFree(&ida_mem);
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Free(&sunctx);
+#endif
+  
+#ifdef ENABLE_MPI
+  MPI_Finalize();
 #endif
 }
 
