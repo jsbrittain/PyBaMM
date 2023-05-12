@@ -44,26 +44,19 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   DEBUG("CasadiSolver::CasadiSolver");
   auto atol = atol_np.unchecked<1>();
 
-  // allocate memory for solver
+  // create context (not supported by older sundial versions)
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Create(NULL, &sunctx);
-  ida_mem = IDACreate(sunctx);
-#else
-  ida_mem = IDACreate();
 #endif
+  
+  // allocate memory for solver
+  ida_mem = IDACreate(sunctx);
 
   // allocate vectors
-#if SUNDIALS_VERSION_MAJOR >= 6
   yy = N_VNew_Serial(number_of_states, sunctx);
   yp = N_VNew_Serial(number_of_states, sunctx);
   avtol = N_VNew_Serial(number_of_states, sunctx);
   id = N_VNew_Serial(number_of_states, sunctx);
-#else
-  yy = N_VNew_Serial(number_of_states);
-  yp = N_VNew_Serial(number_of_states);
-  avtol = N_VNew_Serial(number_of_states);
-  id = N_VNew_Serial(number_of_states);
-#endif
 
   if (number_of_parameters > 0)
   {
@@ -103,29 +96,16 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   if (options.jacobian == "sparse")
   {
     DEBUG("\tsetting sparse matrix");
-#if SUNDIALS_VERSION_MAJOR >= 6
     J = SUNSparseMatrix(number_of_states, number_of_states,
                         jac_times_cjmass_nnz, CSC_MAT, sunctx);
-#else
-    J = SUNSparseMatrix(number_of_states, number_of_states,
-                        jac_times_cjmass_nnz, CSC_MAT);
-#endif
   }
   else if (options.jacobian == "banded") {
     DEBUG("\tsetting banded matrix");
-    #if SUNDIALS_VERSION_MAJOR >= 6
-        J = SUNBandMatrix(number_of_states, jac_bandwidth_upper, jac_bandwidth_lower, sunctx);
-    #else
-        J = SUNBandMatrix(number_of_states, jac_bandwidth_upper, jac_bandwidth_lower);
-    #endif
+      J = SUNBandMatrix(number_of_states, jac_bandwidth_upper, jac_bandwidth_lower, sunctx);
   } else if (options.jacobian == "dense" || options.jacobian == "none")
   {
     DEBUG("\tsetting dense matrix");
-#if SUNDIALS_VERSION_MAJOR >= 6
     J = SUNDenseMatrix(number_of_states, number_of_states, sunctx);
-#else
-    J = SUNDenseMatrix(number_of_states, number_of_states);
-#endif
   }
   else if (options.jacobian == "matrix-free")
   {
@@ -149,69 +129,41 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   if (options.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_Dense(yy, J, sunctx);
-#else
-    LS = SUNLinSol_Dense(yy, J);
-#endif
   }
   else if (options.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_KLU(yy, J, sunctx);
-#else
-    LS = SUNLinSol_KLU(yy, J);
-#endif
   }
   else if (options.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");  
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_Band(yy, J, sunctx);
-#else
-    LS = SUNLinSol_Band(yy, J);
-#endif
   }
   else if (options.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_SPBCGS(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
-#else
-    LS = SUNLinSol_SPBCGS(yy, precon_type, options.linsol_max_iterations);
-#endif
   }
   else if (options.linear_solver == "SUNLinSol_SPFGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_SPFGMR(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
-#else
-    LS = SUNLinSol_SPFGMR(yy, precon_type, options.linsol_max_iterations);
-#endif
   }
   else if (options.linear_solver == "SUNLinSol_SPGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_SPGMR(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
-#else
-    LS = SUNLinSol_SPGMR(yy, precon_type, options.linsol_max_iterations);
-#endif
   }
   else if (options.linear_solver == "SUNLinSol_SPTFQMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-#if SUNDIALS_VERSION_MAJOR >= 6
     LS = SUNLinSol_SPTFQMR(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
-#else
-    LS = SUNLinSol_SPTFQMR(yy, precon_type, options.linsol_max_iterations);
-#endif
   }
 
 
