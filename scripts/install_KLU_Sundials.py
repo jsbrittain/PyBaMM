@@ -104,10 +104,12 @@ cmake_args = [
     "-DLAPACK_ENABLE=ON",
     "-DSUNDIALS_INDEX_SIZE=32",
     "-DEXAMPLES_ENABLE:BOOL=OFF",
+    "-DENABLE_MPI=ON",
     "-DKLU_ENABLE=ON",
     "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
     "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
+    "-DCMAKE_PREFIX_PATH=/home/jsb/brew/opt/open-mpi",
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
 ]

@@ -3,6 +3,9 @@
 #include "common.hpp"
 #include <memory>
 
+#include <iostream>
+//#define MPI
+
 CasadiSolver *
 create_casadi_solver(int number_of_states, int number_of_parameters,
                      const Function &rhs_alg, const Function &jac_times_cjmass,
@@ -43,6 +46,9 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 {
   DEBUG("CasadiSolver::CasadiSolver");
   auto atol = atol_np.unchecked<1>();
+#ifdef MPI
+  MPI_Init(NULL, NULL);
+#endif
 
   // create context (not supported by older sundial versions)
 #if SUNDIALS_VERSION_MAJOR >= 6
@@ -53,10 +59,20 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
   ida_mem = IDACreate(sunctx);
 
   // allocate vectors
+#ifdef MPI
+  MPI_Comm comm = MPI_COMM_WORLD;
+  sunindextype local_length = number_of_states,
+               global_length = number_of_states;
+  yy = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+  yp = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+  avtol = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+  id = N_VNew_Parallel(comm, local_length, global_length, sunctx);
+#else
   yy = N_VNew_Serial(number_of_states, sunctx);
   yp = N_VNew_Serial(number_of_states, sunctx);
   avtol = N_VNew_Serial(number_of_states, sunctx);
   id = N_VNew_Serial(number_of_states, sunctx);
+#endif
 
   if (number_of_parameters > 0)
   {
@@ -124,6 +140,8 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     precon_type = PREC_LEFT;
   }
   #endif
+
+  std::cout << options.linear_solver << std::endl;
 
   // set linear solver
   if (options.linear_solver == "SUNLinSol_Dense")
@@ -234,6 +252,10 @@ CasadiSolver::~CasadiSolver()
   IDAFree(&ida_mem);
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Free(&sunctx);
+#endif
+
+#ifdef MPI
+  MPI_Finalize();
 #endif
 }
 
