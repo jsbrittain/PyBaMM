@@ -75,6 +75,24 @@ else()
   find_package(casadi CONFIG REQUIRED)
 endif()
 
+# Add SuperLU_DIST support
+add_library(GKlib STATIC IMPORTED)
+set_target_properties(GKlib PROPERTIES
+  IMPORTED_LOCATION /home/jsb/.local/lib/libGKlib.a
+)
+add_library(metis STATIC IMPORTED)
+set_target_properties(metis PROPERTIES
+  IMPORTED_LOCATION /home/jsb/.local/lib/libmetis.a
+)
+add_library(parmetis STATIC IMPORTED)
+set_target_properties(parmetis PROPERTIES
+  IMPORTED_LOCATION /home/jsb/.local/lib/libparmetis.a
+)
+set(SUPERLUDIST_LIBS GKlib metis parmetis blas)
+find_package(MPI REQUIRED)
+include_directories("/home/jsb/repos/xiaoyeli/superlu_dist/SRC")
+include_directories(${SUPERLUDIST_DIR})
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
@@ -83,7 +101,7 @@ message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}")
 include_directories("/home/jsb/repos/xiaoyeli/superlu_dist/SRC")
 include_directories(${SUPERLUDIST_DIR})
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR} ${MPI_INCLUDE_PATH})
-target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi ${MPI_LIBRARIES})
+target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi ${MPI_LIBRARIES} ${SUPERLUDIST_LIBS})
 
 # link suitesparse
 # if using vcpkg, use config mode to
@@ -94,4 +112,4 @@ else()
   find_package(SuiteSparse REQUIRED)
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
-target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES} ${SUPERLUDIST_LIBS})
