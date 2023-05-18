@@ -36,6 +36,7 @@ find_path(SUNDIALS_INCLUDE_DIR
     sunlinsol/sunlinsol_dense.h
     sunlinsol/sunlinsol_spbcgs.h
     sunlinsol/sunlinsol_lapackdense.h
+    sunlinsol/sunlinsol_superludist.h
     sunmatrix/sunmatrix_sparse.h
   PATH_SUFFIXES
     include
@@ -49,9 +50,11 @@ set(SUNDIALS_WANT_COMPONENTS
   sundials_sunlinsoldense
   sundials_sunlinsolspbcgs
   sundials_sunlinsollapackdense
+  sundials_sunlinsolsuperludist
   sundials_sunmatrixsparse
   sundials_nvecserial
   sundials_nvecparallel
+  sundials_nvecopenmp
   )
 
 # find the SUNDIALS libraries

@@ -23,19 +23,7 @@ public:
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
 #else
-  // Compatibility layer - wrap older sundials functions in new-style calls
-  void SUNContext_Create(void *comm, SUNContext *ctx)
-  {
-    // Function not available
-    return;
-  }
-
-  int SUNContext_Free(SUNContext *ctx)
-  {
-    // Function not available
-    return;
-  }
-
+  // Wrap older sundials function calls in new-style wrappers
   void* IDACreate(SUNContext sunctx)
   {
     return IDACreate();

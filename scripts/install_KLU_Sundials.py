@@ -101,15 +101,18 @@ download_extract_library(sundials_url, download_dir)
 KLU_INCLUDE_DIR = os.path.join(install_dir, "include")
 KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
 cmake_args = [
-    "-DLAPACK_ENABLE=ON",
+    "-DENABLE_LAPACK=ON",
     "-DSUNDIALS_INDEX_SIZE=32",
     "-DEXAMPLES_ENABLE:BOOL=OFF",
-    "-DENABLE_MPI=ON",
-    "-DKLU_ENABLE=ON",
+    "-DENABLE_KLU=ON",
     "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
     "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
-    "-DCMAKE_PREFIX_PATH=/home/jsb/brew/opt/open-mpi",
+    "-DENABLE_MPI=ON",
+    "-DENABLE_SUPERLUDIST=ON",
+    "-DSUPERLUDIST_DIR=/home/jsb/.local",
+    "-DENABLE_OPENMP=ON",
+    "-DSUPERLUDIST_OpenMP=ON",
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
 ]
@@ -124,6 +127,9 @@ if not os.path.exists(build_dir):
 sundials_src = "../sundials-{}".format(sundials_version)
 print("-" * 10, "Running CMake prepare", "-" * 40)
 subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir)
+
+# Link GK/Metis/ParMetis libraries manually
+subprocess.run(os.path.join(pybamm_dir, 'scripts')+'/fix_superludist_install.sh', cwd=build_dir)
 
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]

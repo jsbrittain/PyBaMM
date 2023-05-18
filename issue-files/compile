@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+source .tox/dev/bin/activate
+rm pybamm/solvers/idaklu.*.so
+rm -rf build/*
+python compile.py
+cd build
+cmake --build .
+
+# Rerun linker with GK, metis, parmetis, blas
+/usr/bin/c++ -fPIC -O3 -DNDEBUG -flto -shared  -o idaklu.cpython-310-x86_64-linux-gnu.so CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp.o CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp.o CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp.o CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu/python.cpp.o CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu/solution.cpp.o CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu/options.cpp.o CMakeFiles/idaklu.dir/pybamm/solvers/c_solvers/idaklu.cpp.o  -Wl,-rpath,/home/jsb/.local/lib:/home/jsb/PyBaMM/.tox/dev/lib/python3.10/site-packages/casadi /home/jsb/.local/lib/libsundials_idas.so /home/jsb/.local/lib/libsundials_sunlinsolklu.so /home/jsb/.local/lib/libsundials_sunlinsoldense.so /home/jsb/.local/lib/libsundials_sunlinsolspbcgs.so /home/jsb/.local/lib/libsundials_sunlinsollapackdense.so /home/jsb/.local/lib/libsundials_sunlinsolsuperludist.so /home/jsb/.local/lib/libsundials_sunmatrixsparse.so /home/jsb/.local/lib/libsundials_nvecserial.so /home/jsb/.local/lib/libsundials_nvecparallel.so /home/jsb/.local/lib/libsundials_nvecopenmp.so /home/jsb/PyBaMM/.tox/dev/lib/python3.10/site-packages/casadi/libcasadi.so.3.7 /usr/lib/x86_64-linux-gnu/libmpichcxx.so /usr/lib/x86_64-linux-gnu/libmpich.so /home/jsb/.local/lib/libsuitesparseconfig.so -ldl /home/jsb/.local/lib/libmetis.a /home/jsb/.local/lib/libparmetis.a /home/jsb/.local/lib/libGKlib.a -lblas
+
+mv idaklu* ../pybamm/solvers/
+
+cd ..
+python test.py > issue2645.log 2> issue2645.err
+
+cat issue2645.err
+cat issue2645.log

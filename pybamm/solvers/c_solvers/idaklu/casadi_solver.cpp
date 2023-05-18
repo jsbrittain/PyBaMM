@@ -4,7 +4,7 @@
 #include <memory>
 
 #include <iostream>
-#define MPI
+//#define MPI
 
 CasadiSolver *
 create_casadi_solver(int number_of_states, int number_of_parameters,
@@ -51,7 +51,9 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
 #endif
 
   // create context (not supported by older sundial versions)
+#if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Create(NULL, &sunctx);
+#endif
   
   // allocate memory for solver
   ida_mem = IDACreate(sunctx);
@@ -127,19 +129,17 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     J = NULL;
   }
 
-#if SUNDIALS_VERSION_MAJOR >= 6
+  #if SUNDIALS_VERSION_MAJOR >= 6
   int precon_type = SUN_PREC_NONE;
   if (options.preconditioner != "none") {
     precon_type = SUN_PREC_LEFT;
   }
-#else
+  #else
   int precon_type = PREC_NONE;
   if (options.preconditioner != "none") {
     precon_type = PREC_LEFT;
   }
-#endif
-
-  std::cout << options.linear_solver << std::endl;
+  #endif
 
   // set linear solver
   if (options.linear_solver == "SUNLinSol_Dense")
@@ -180,6 +180,20 @@ CasadiSolver::CasadiSolver(np_array atol_np, double rel_tol,
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
     LS = SUNLinSol_SPTFQMR(yy, precon_type, options.linsol_max_iterations,
                           sunctx);
+  }
+  else if (options.linear_solver == "SUNLinSol_SuperLUDIST")
+  {
+    DEBUG("\tsetting SUNLinSol_SuperLUDIST solver");
+    gridinfo_t *slu_grid;
+    xLUstruct_t *slu_lu;
+    xScalePermstruct_t *slu_scaleperm;
+    xSOLVEstruct_t *slu_solve;
+    SuperLUStat_t *slu_stat;
+    superlu_dist_options_t *slu_options;
+    // nvector support: serial, openmp, pthread, paralllel
+    LS = SUNLinSol_SuperLUDIST(yy, J,
+        slu_grid, slu_lu, slu_scaleperm, slu_solve, slu_stat, slu_options,  // SuperLU_DIST object pointers
+        sunctx);
   }
 
 
@@ -248,7 +262,10 @@ CasadiSolver::~CasadiSolver()
   }
 
   IDAFree(&ida_mem);
+#if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext_Free(&sunctx);
+#endif
+
 #ifdef MPI
   MPI_Finalize();
 #endif

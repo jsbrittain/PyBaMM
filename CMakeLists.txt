@@ -78,9 +78,12 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
-message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}") 
-target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR} /home/jsb/brew/include)
-target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
+find_package(MPI REQUIRED)
+message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}")
+include_directories("/home/jsb/repos/xiaoyeli/superlu_dist/SRC")
+include_directories(${SUPERLUDIST_DIR})
+target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR} ${MPI_INCLUDE_PATH})
+target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi ${MPI_LIBRARIES})
 
 # link suitesparse
 # if using vcpkg, use config mode to
