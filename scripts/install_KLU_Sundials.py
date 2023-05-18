@@ -54,6 +54,14 @@ install_dir = (
     else os.path.join(pybamm_dir, args.install_dir)
 )
 
+# 0 --- (pre-install) SuperLU_DIST
+subprocess.run(
+    [os.path.join(pybamm_dir, "scripts", "install_superludist_deps.sh") + f" {download_dir}"],
+    cwd=os.path.join(pybamm_dir, "scripts"), shell=True)
+superludist_libs = ["libGKlib.a", "libmetis.a", "libparmetis.a"]
+superludist_libs = [os.path.join(install_dir, 'lib', lib) for lib in superludist_libs] + ["-lblas"]
+superludist_libs = ' '.join(superludist_libs)
+
 # 1 --- Download SuiteSparse
 suitesparse_version = "6.0.3"
 suitesparse_url = (
@@ -110,9 +118,11 @@ cmake_args = [
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     "-DENABLE_MPI=ON",
     "-DENABLE_SUPERLUDIST=ON",
-    "-DSUPERLUDIST_DIR=/home/jsb/.local",
+    "-DSUPERLUDIST_DIR={}".format(install_dir),
     "-DENABLE_OPENMP=ON",
     "-DSUPERLUDIST_OpenMP=ON",
+    "-DCMAKE_CXX_STANDARD_LIBRARIES='{}'".format(superludist_libs),
+    "-DCMAKE_C_STANDARD_LIBRARIES='{}'".format(superludist_libs),
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
 ]
@@ -127,9 +137,6 @@ if not os.path.exists(build_dir):
 sundials_src = "../sundials-{}".format(sundials_version)
 print("-" * 10, "Running CMake prepare", "-" * 40)
 subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir)
-
-# Link GK/Metis/ParMetis libraries manually
-subprocess.run(os.path.join(pybamm_dir, 'scripts')+'/fix_superludist_install.sh', cwd=build_dir)
 
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]
