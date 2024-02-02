@@ -1,4 +1,4 @@
-name: Build and publish package to PyPI
+name: Test win wheel interpolant
 on:
   release:
     types: [published]
