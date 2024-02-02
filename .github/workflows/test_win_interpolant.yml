@@ -1,0 +1,90 @@
+name: Build and publish package to PyPI
+on:
+  release:
+    types: [published]
+  schedule:
+    # Run at 10 am UTC on day-of-month 1 and 15.
+    - cron: "0 10 1,15 * *"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        default: "testpypi"
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+
+# Set options available for all jobs that use cibuildwheel
+env:
+  # Increase pip debugging output, equivalent to `pip -vv`
+  CIBW_BUILD_VERBOSITY: 2
+  # Disable build isolation to allow pre-installing build-time dependencies.
+  # Note: CIBW_BEFORE_BUILD must be present in all jobs using cibuildwheel.
+  CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+  # Skip PyPy and MUSL builds in any and all jobs
+  CIBW_SKIP: "pp* *musllinux*"
+  FORCE_COLOR: 3
+
+jobs:
+  build_windows_wheels:
+    name: Wheels (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+
+      - name: Get number of cores on Windows
+        id: get_num_cores
+        shell: python
+        run: |
+          from os import environ, cpu_count
+          num_cpus = cpu_count()
+          output_file = environ['GITHUB_OUTPUT']
+          with open(output_file, "a", encoding="utf-8") as output_stream:
+              output_stream.write(f"count={num_cpus}\n")
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
+
+      - name: Install vcpkg on Windows
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
+      - name: Cache packages installed through vcpkg on Windows
+        uses: actions/cache@v4
+        env:
+          cache-name: vckpg_binary_cache
+        with:
+          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
+
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+      - name: Build 64-bit wheels on Windows
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: >
+            PYBAMM_USE_VCPKG=ON
+            VCPKG_ROOT_DIR=C:\vcpkg
+            VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
+            VCPKG_FEATURE_FLAGS=manifests,registries
+            CMAKE_GENERATOR="Visual Studio 17 2022"
+            CMAKE_GENERATOR_PLATFORM=x64
+            CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
+          CIBW_ARCHS: AMD64
+          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel # skip CasADi and CMake
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
+
+      - name: Test interpolant
+        run: python test_interpolant.py
