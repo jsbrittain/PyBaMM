@@ -27,15 +27,6 @@ def set_iree_state():
     """
     state = "ON" if os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF") == "ON" else "OFF"
     if state == "ON":
-        if sys.platform == "win32":
-            warnings.warn(
-                (
-                    "IREE is not enabled on Windows yet. "
-                    "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
-                ),
-                stacklevel=2,
-            )
-            return "OFF"
         if sys.platform == "darwin":
             # iree-compiler is currently only available as a wheel on macOS 13 (or
             # higher) and Python version 3.11
@@ -104,29 +95,6 @@ def run_pybamm_requires(session):
                 "advice.detachedHead=false",
                 external=True,
             )
-        if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
-            "./iree"
-        ):
-            session.run(
-                "git",
-                "clone",
-                "--depth=1",
-                "--recurse-submodules",
-                "--shallow-submodules",
-                "--branch=candidate-20240507.886",
-                "https://github.com/openxla/iree",
-                "iree/",
-                external=True,
-            )
-            with session.chdir("iree"):
-                session.run(
-                    "git",
-                    "submodule",
-                    "update",
-                    "--init",
-                    "--recursive",
-                    external=True,
-                )
     else:
         session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 
@@ -215,6 +183,32 @@ def set_dev(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
+
+    # Clone the IREE repository
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
+        "./iree"
+    ):
+        session.run(
+            "git",
+            "clone",
+            "--depth=1",
+            "--recurse-submodules",
+            "--shallow-submodules",
+            "--branch=candidate-20240507.886",
+            "https://github.com/openxla/iree",
+            "iree/",
+            external=True,
+        )
+        with session.chdir("iree"):
+            session.run(
+                "git",
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+                external=True,
+            )
+
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
     args = []
