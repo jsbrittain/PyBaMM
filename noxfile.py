@@ -142,6 +142,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
+    session.install("--upgrade", "pip", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
