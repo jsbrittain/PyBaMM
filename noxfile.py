@@ -74,6 +74,33 @@ def set_environment_variables(env_dict, session):
         session.env[key] = value
 
 
+def download_iree(session):
+    # Clone the IREE repository
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
+        "./iree"
+    ):
+        session.run(
+            "git",
+            "clone",
+            "--depth=1",
+            "--recurse-submodules",
+            "--shallow-submodules",
+            "--branch=candidate-20240507.886",
+            "https://github.com/openxla/iree",
+            "iree/",
+            external=True,
+        )
+        with session.chdir("iree"):
+            session.run(
+                "git",
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+                external=True,
+            )
+
+
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
@@ -108,6 +135,7 @@ def run_coverage(session):
     session.install("-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
+        download_iree(session)
         session.install(
             "-e",
             ".[iree]",
@@ -147,6 +175,7 @@ def run_unit(session):
     components = ["all", "dev", "jax"]
     args = []
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        download_iree()
         # See comments in 'dev' session
         components.append("iree")
         args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
@@ -188,32 +217,6 @@ def set_dev(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
-
-    # Clone the IREE repository
-    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
-        "./iree"
-    ):
-        session.run(
-            "git",
-            "clone",
-            "--depth=1",
-            "--recurse-submodules",
-            "--shallow-submodules",
-            "--branch=candidate-20240507.886",
-            "https://github.com/openxla/iree",
-            "iree/",
-            external=True,
-        )
-        with session.chdir("iree"):
-            session.run(
-                "git",
-                "submodule",
-                "update",
-                "--init",
-                "--recursive",
-                external=True,
-            )
-
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
     args = []
@@ -224,6 +227,7 @@ def set_dev(session):
         #  - Jax and Jaxlib version [pyproject.toml]
         #  - IREE repository clone (use the matching nightly candidate) [noxfile.py]
         #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
+        download_iree(session)
         components.append("iree")
         args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
     # Temporary fix for Python 3.12 CI. TODO: remove after
