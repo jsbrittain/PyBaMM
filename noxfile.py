@@ -143,16 +143,20 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("--upgrade", "pip", silent=False)
-    session.install("-e", ".[all,dev,jax]", silent=False)
+
+    components = ["all", "dev", "jax"]
+    args = []
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
-        session.install(
-            "-e",
-            ".[iree]",
-            "--find-links",
-            PYBAMM_ENV.get("IREE_INDEX_URL"),
-            silent=False,
-        )
+        components.append("iree")
+        args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
+
+    session.install(
+        "-e",
+        ".[{}]".format(",".join(components)),
+        *args,
+        silent=False,
+    )
     session.run("python", "run-tests.py", "--unit")
 
 
