@@ -175,7 +175,7 @@ def run_unit(session):
     components = ["all", "dev", "jax"]
     args = []
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
-        download_iree()
+        download_iree(session)
         # See comments in 'dev' session
         components.append("iree")
         args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
