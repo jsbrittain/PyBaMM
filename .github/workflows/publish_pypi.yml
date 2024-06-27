@@ -26,6 +26,9 @@ env:
   # Skip PyPy and MUSL builds in any and all jobs
   CIBW_SKIP: "pp* *musllinux*"
   FORCE_COLOR: 3
+  # Enable IDAKLU expression evaluation backends
+  PYBAMM_IDAKLU_EXPR_CASADI: ON
+  PYBAMM_IDAKLU_EXPR_IREE: ON
 
 jobs:
   build_windows_wheels:
