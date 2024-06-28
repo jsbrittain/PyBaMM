@@ -19,7 +19,7 @@ on:
 # Set options available for all jobs that use cibuildwheel
 env:
   # Increase pip debugging output, equivalent to `pip -vv`
-  CIBW_BUILD_VERBOSITY: 2
+  CIBW_BUILD_VERBOSITY: 3
   # Disable build isolation to allow pre-installing build-time dependencies.
   # Note: CIBW_BEFORE_BUILD must be present in all jobs using cibuildwheel.
   CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
