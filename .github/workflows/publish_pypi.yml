@@ -144,8 +144,8 @@ jobs:
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: >
-            PYBAMM_IDAKLU_EXPR_CASADI: ON
-            PYBAMM_IDAKLU_EXPR_IREE: ON
+            PYBAMM_IDAKLU_EXPR_CASADI=ON
+            PYBAMM_IDAKLU_EXPR_IREE=ON
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
