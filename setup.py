@@ -154,7 +154,7 @@ class CMakeBuild(build_ext):
         else:
             print("-" * 10, "Building IDAKLU module", "-" * 40)
             subprocess.run(
-                ["cmake", "--build", ".", "--config", "Release"],
+                ["cmake", "--build", ".", "--trace-expand", "--config", "Release"],
                 cwd=build_dir,
                 env=build_env,
                 check=True,
