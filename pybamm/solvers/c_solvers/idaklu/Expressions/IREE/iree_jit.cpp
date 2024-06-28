@@ -10,14 +10,14 @@
 #include <tuple>
 #include <vector>
 #include <cstdio>
-#include <unistd.h>
+//#include <unistd.h>
 
 #include <iree/compiler/embedding_api.h>
 #include <iree/compiler/loader.h>
 #include <iree/runtime/api.h>
 
 // Used to suppress stderr output (see initIREE below)
-#ifdef _WIN32
+/*#ifdef _WIN32
 #include <io.h>
 #define close _close
 #define dup _dup
@@ -28,6 +28,7 @@
 #else
 #define NULL_DEVICE "/dev/null"
 #endif
+*/
 
 void IREESession::handle_compiler_error(iree_compiler_error_t *error) {
   const char *msg = ireeCompilerErrorGetMessage(error);
@@ -111,16 +112,20 @@ int IREECompiler::initIREE(int argc, const char **argv) {
     fprintf(stderr, "Error: IREE_COMPILER_LIB file not found\n");
     return 1;
   }
+  /*
   // Suppress stderr
   int saved_stderr = dup(fileno(stderr));
   if (!freopen(NULL_DEVICE, "w", stderr))
     DEBUG("Error: failed redirecting stderr");
+  */
   // Load library
   bool result = ireeCompilerLoadLibrary(iree_compiler_lib);
   // Restore stderr
+  /*
   fflush(stderr);
   dup2(saved_stderr, fileno(stderr));
   close(saved_stderr);
+  */
   // Process result
   if (!result) {
     // Library may have already been loaded (can be safely ignored),
