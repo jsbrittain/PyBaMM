@@ -43,10 +43,10 @@ public:
 
 public:
   std::unique_ptr<IREESession> session;
-  std::vector<std::vector<float>> result;  // cppcheck-suppress unusedStructMember
+  std::vector<std::vector<double>> result;  // cppcheck-suppress unusedStructMember
   std::vector<std::vector<int>> input_shape;  // cppcheck-suppress unusedStructMember
   std::vector<std::vector<int>> output_shape;  // cppcheck-suppress unusedStructMember
-  std::vector<std::vector<float>> input_data;  // cppcheck-suppress unusedStructMember
+  std::vector<std::vector<double>> input_data;  // cppcheck-suppress unusedStructMember
 
   BaseFunctionType m_func;  // cppcheck-suppress unusedStructMember
   std::string module_name;  // cppcheck-suppress unusedStructMember

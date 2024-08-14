@@ -154,12 +154,12 @@ void IREEFunction::evaluate(int n_outputs) {
     if (m_func.pytree_shape[m_arg_from] > 1) {
       // Index into argument using appropriate shape
       for(int k=0; k<m_func.pytree_sizes[mlir_arg]; k++) {
-        input_data[m_arg_to][k] = static_cast<float>(m_arg[m_arg_from][m_arg_argix[mlir_arg]+k]);
+        input_data[m_arg_to][k] = m_arg[m_arg_from][m_arg_argix[mlir_arg]+k];
       }
     } else {
       // Copy the entire vector
       for(int k=0; k<input_shape[m_arg_to][0]; k++) {
-        input_data[m_arg_to][k] = static_cast<float>(m_arg[m_arg_from][k]);
+        input_data[m_arg_to][k] = m_arg[m_arg_from][k];
       }
     }
   }

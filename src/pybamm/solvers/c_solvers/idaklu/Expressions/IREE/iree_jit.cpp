@@ -77,11 +77,11 @@ IREESession::IREESession(const char *device_uri, const std::string& mlir_code) :
 
 int IREESession::init() {
   if (initCompiler() != 0)  // Prepare compiler inputs and outputs
-    return 1;
+    throw std::runtime_error("Error: failed to initialise compiler");
   if (initCompileToByteCode() != 0)  // Compile to bytecode
-    return 1;
+    throw std::runtime_error("Error: failed to compile to bytecode");
   if (initRuntime() != 0)  // Initialise runtime environment
-    return 1;
+    throw std::runtime_error("Error: failed to initialise runtime");
   return 0;
 };
 
@@ -286,8 +286,8 @@ int IREESession::cleanup() {
 iree_status_t IREESession::iree_runtime_exec(
   const std::string& function_name,
   const std::vector<std::vector<int>>& inputs,
-  const std::vector<std::vector<float>>& data,
-  std::vector<std::vector<float>>& result
+  const std::vector<std::vector<double>>& data,
+  std::vector<std::vector<double>>& result
 ) {
 
   // Initialize the call to the function.
@@ -318,21 +318,12 @@ iree_status_t IREESession::iree_runtime_exec(
         for (int i = 0; i < input_shape.size(); i++) {
           arg_shape[i] = input_shape[i];
         }
-        int numel = 1;
-        for(int i = 0; i < input_shape.size(); i++) {
-          numel *= input_shape[i];
-        }
-        std::vector<float> arg_data(numel);
-        for(int i = 0; i < numel; i++) {
-          arg_data[i] = input_data[i];
-        }
-
         status = iree_hal_buffer_view_allocate_buffer_copy(
           device, device_allocator,
           // Shape rank and dimensions:
           arg_shape.size(), arg_shape.data(),
           // Element type:
-          IREE_HAL_ELEMENT_TYPE_FLOAT_32,
+          IREE_HAL_ELEMENT_TYPE_FLOAT_64,
           // Encoding type:
           IREE_HAL_ENCODING_TYPE_DENSE_ROW_MAJOR,
           (iree_hal_buffer_params_t){
@@ -344,7 +335,7 @@ iree_status_t IREESession::iree_runtime_exec(
               .type = IREE_HAL_MEMORY_TYPE_DEVICE_LOCAL,
           },
           // The actual heap buffer to wrap or clone and its allocator:
-          iree_make_const_byte_span(&arg_data[0], sizeof(float) * arg_data.size()),
+          iree_make_const_byte_span(&input_data[0], sizeof(double) * input_data.size()),
           // Buffer view + storage are returned and owned by the caller:
           &arg);
       }
@@ -391,7 +382,7 @@ iree_status_t IREESession::iree_runtime_exec(
         );
       }
       status = iree_hal_buffer_map_read(iree_hal_buffer_view_buffer(result_view), 0,
-                               &result[k][0], sizeof(float) * result[k].size());
+                               &result[k][0], sizeof(double) * result[k].size());
       if (!iree_status_is_ok(status)) {
         std::cerr << "Error: iree_hal_buffer_map_read failed" << std::endl;
         iree_status_fprint(stderr, status);

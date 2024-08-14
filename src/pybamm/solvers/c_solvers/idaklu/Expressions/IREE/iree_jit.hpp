@@ -132,8 +132,8 @@ public:  // public methods
   iree_status_t iree_runtime_exec(
     const std::string& function_name,
     const std::vector<std::vector<int>>& inputs,
-    const std::vector<std::vector<float>>& data,
-    std::vector<std::vector<float>>& result
+    const std::vector<std::vector<double>>& data,
+    std::vector<std::vector<double>>& result
   );
 };
 

@@ -8,10 +8,8 @@ import pybamm
 import numpy as np
 import numbers
 import scipy.sparse as sparse
-from scipy.linalg import bandwidth
 
 import importlib
-import warnings
 
 if pybamm.have_jax():
     import jax
@@ -544,34 +542,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 model.convert_to_format == "jax"
                 and self._options["jax_evaluator"] == "iree"
             ):
-                # Convert Jax functions to MLIR (also, demote to single precision)
+                # Convert Jax functions to MLIR
                 idaklu_solver_fcn = idaklu.create_iree_solver
-                pybamm.demote_expressions_to_32bit = True
-                if pybamm.demote_expressions_to_32bit:
-                    warnings.warn(
-                        "Demoting expressions to 32-bit for MLIR conversion",
-                        stacklevel=2,
-                    )
-                    jnpfloat = jnp.float32
-                else:  # pragma: no cover
-                    jnpfloat = jnp.float64
-                    raise pybamm.SolverError(
-                        "Demoting expressions to 32-bit is required for MLIR conversion"
-                        " at this time"
-                    )
+                jnpfloat = jnp.float64
 
                 # input arguments (used for lowering)
-                t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnpfloat))
-                y0 = self._demote_64_to_32(model.y0)
-                inputs0 = self._demote_64_to_32(inputs_to_dict(inputs))
-                cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnpfloat))  # array
+                t_eval = jnp.array([0.0], dtype=jnpfloat)
+                y0 = model.y0
+                inputs0 = inputs_to_dict(inputs)
+                cj = jnp.array([1.0], dtype=jnpfloat)  # array
                 v0 = jnp.zeros(model.len_rhs_and_alg, jnpfloat)
                 mass_matrix = model.mass_matrix.entries.toarray()
-                mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
+                mass_matrix_demoted = mass_matrix
 
                 # rhs_algebraic
                 rhs_algebraic_demoted = model.rhs_algebraic_eval
-                rhs_algebraic_demoted._demote_constants()
 
                 def fcn_rhs_algebraic(t, y, inputs):
                     # function wraps an expression tree (and names MLIR module)
@@ -593,17 +578,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 jac_times_cjmass_nnz = sparse_eval.nnz
                 jac_times_cjmass_colptrs = sparse_eval.indptr
                 jac_times_cjmass_rowvals = sparse_eval.indices
-                jac_bw_lower, jac_bw_upper = bandwidth(
-                    sparse_eval.todense()
-                )  # potentially slow
+                coo_row_indices, coo_col_indices = sparse_eval.nonzero()
+                jac_bw_lower = max(coo_row_indices - coo_col_indices)
+                jac_bw_upper = max(coo_col_indices - coo_row_indices)
                 if jac_bw_upper <= 1:
                     jac_bw_upper = jac_bw_lower - 1
                 if jac_bw_lower <= 1:
                     jac_bw_lower = jac_bw_upper + 1
-                coo = sparse_eval.tocoo()  # convert to COOrdinate format for indexing
 
                 def fcn_jac_times_cjmass_sparse(t, y, p, cj):
-                    return fcn_jac_times_cjmass(t, y, p, cj)[coo.row, coo.col]
+                    return fcn_jac_times_cjmass(t, y, p, cj)[
+                        coo_row_indices, coo_col_indices
+                    ]
 
                 jac_times_cjmass = self._make_iree_function(
                     fcn_jac_times_cjmass_sparse, t_eval, y0, inputs0, cj
@@ -613,12 +599,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 def fcn_mass_action(v):
                     return mass_matrix_demoted @ v
 
-                mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
+                mass_action_demoted = fcn_mass_action
                 mass_action = self._make_iree_function(mass_action_demoted, v0)
-
-                # rootfn
-                for ix, _ in enumerate(model.terminate_events_eval):
-                    model.terminate_events_eval[ix]._demote_constants()
 
                 def fcn_rootfn(t, y, inputs):
                     return jnp.array(
@@ -627,7 +609,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     ).reshape(-1)
 
                 def fcn_rootfn_demoted(t, y, inputs):
-                    return self._demote_64_to_32(fcn_rootfn)(t, y, inputs)
+                    return fcn_rootfn(t, y, inputs)
 
                 rootfn = self._make_iree_function(
                     fcn_rootfn_demoted, t_eval, y0, inputs0
@@ -668,7 +650,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self.dvar_dp_idaklu_fcns = []
                 for key in self.output_variables:
                     fcn = self.computed_var_fcns[key]
-                    fcn._demote_constants()
                     self.var_idaklu_fcns.append(
                         self._make_iree_function(
                             lambda t, y, p: fcn(t, y, p),  # noqa: B023
@@ -706,7 +687,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     next(f for f in os.listdir(iree_lib_path) if "IREECompiler" in f),
                 )
 
-                pybamm.demote_expressions_to_32bit = False
             else:  # pragma: no cover
                 raise pybamm.SolverError(
                     "Unsupported evaluation engine for convert_to_format='jax'"
@@ -808,7 +788,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # Lower to MLIR
         lowered = jax.jit(fcn).lower(*args)
         iree_fcn.mlir = lowered.as_text()
-        self._check_mlir_conversion(fcn.__name__, iree_fcn.mlir)
         iree_fcn.kept_var_idx = list(lowered._lowering.compile_args["kept_var_idx"])
         # Record number of variables in each argument (these will flatten in the mlir)
         iree_fcn.pytree_shape = [
@@ -820,13 +799,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ]
         iree_fcn.n_args = len(args)
         return iree_fcn
-
-    def _check_mlir_conversion(self, name, mlir: str):
-        if mlir.count("f64") > 0:  # pragma: no cover
-            warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})", stacklevel=2)
-
-    def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
-        return pybamm.EvaluatorJax._demote_64_to_32(x)
 
     def _integrate(self, model, t_eval, inputs_dict=None):
         """
@@ -1031,12 +1003,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             y0full = y0
             ydot0full = ydot0
-
-        if jax_iree_format:
-            pybamm.demote_expressions_to_32bit = True
-            y0full = self._demote_64_to_32(y0full)
-            ydot0full = self._demote_64_to_32(ydot0full)
-            pybamm.demote_expressions_to_32bit = False
 
         model.y0full = y0full
         model.ydot0full = ydot0full

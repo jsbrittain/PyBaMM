@@ -27,7 +27,9 @@ public:
     int iree_argc = 2;
     std::string target_backends_str = "--iree-hal-target-backends=" + target_backends;
     const char* iree_argv[2] = {"iree", target_backends_str.c_str()};
-    iree_compiler->init(iree_argc, iree_argv);
+    if (iree_compiler->init(iree_argc, iree_argv)) {
+      throw std::runtime_error("IREEFunctions: Failed to initialise IREECompiler");
+    }
     DEBUG("IREEFunctions: Initialised IREECompiler");
     return 0;
   }
