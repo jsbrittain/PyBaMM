@@ -11,9 +11,19 @@ import pybamm
 from tests import get_discretisation_for_testing
 
 
+# TestIDAKLUSolver tests can be fragile when run in concurrently, so assign them all to
+# the same worker group to avoid parallel execution
+class GroupTests:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for attr, value in cls.__dict__.items():
+            if callable(value):
+                setattr(cls, attr, pytest.mark.xdist_group(name="iree")(value))
+
+
 @pytest.mark.cibw
 @pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
-class TestIDAKLUSolver:
+class TestIDAKLUSolver(GroupTests):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials

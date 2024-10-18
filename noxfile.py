@@ -199,7 +199,7 @@ def run_unit(session):
             PYBAMM_ENV.get("IREE_INDEX_URL"),
             silent=False,
         )
-    session.run("python", "-m", "pytest", "-m", "unit")
+    session.run("python", "-m", "pytest", "-m", "unit", "--dist=loadgroup")
 
 
 @nox.session(name="examples")
