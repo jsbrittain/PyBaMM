@@ -40,7 +40,7 @@ def set_iree_state():
             # iree-compiler is currently only available as a wheel on macOS 13 (or
             # higher) and Python version 3.11
             mac_ver = int(platform.mac_ver()[0].split(".")[0])
-            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 14:
+            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 13:
                 warnings.warn(
                     (
                         "IREE is only supported on MacOS 13 (or higher) and Python"
@@ -199,7 +199,7 @@ def run_unit(session):
             PYBAMM_ENV.get("IREE_INDEX_URL"),
             silent=False,
         )
-    session.run("python", "-m", "pytest", "-m", "unit")
+    session.run("python", "-m", "pytest", "-m", "unit", "--dist=loadgroup")
 
 
 @nox.session(name="examples")
